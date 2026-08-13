@@ -63,7 +63,18 @@ def render(incident: dict) -> None:
     verdict = st.session_state.get("s1_verdict")
 
     if not verdict and transcript and round_no <= MAX_ROUNDS:
-        answer = st.chat_input("담당자 답변을 입력하세요", key="w_s1_input")
+        answer = None
+        quick = st.container(horizontal=True)
+        with quick:
+            st.caption("빠른 답변")
+            for choice in ["예", "아니오", "A", "B"]:
+                if st.button(choice, key=f"w_s1_quick_{choice}_{round_no}"):
+                    answer = choice
+
+        typed = st.chat_input("담당자 답변을 입력하세요 (또는 위 버튼으로 바로 답변)", key="w_s1_input")
+        if typed:
+            answer = typed
+
         if answer:
             st.session_state["s1_transcript"].append({"role": "user", "content": answer})
             if round_no >= MAX_ROUNDS:
@@ -196,27 +207,27 @@ def _canned_question(round_no: int, selected: dict) -> str:
     if round_no == 1:
         return _format_devil_message(
             f"{option.get('label', '?')}안의 리드타임 {option.get('lead_time_days', 0)}일은 "
-            "어느 시점의 어떤 자료를 기준으로 산출한 수치입니까?",
+            "파업 발표 이후 기준으로 재산출된 수치입니까, 아니면 파업 이전 평시 기준입니까? "
+            "(A: 파업 이후 재산출 / B: 파업 이전 평시 기준)",
             "파업 기간 중에는 평시 기준 리드타임이 성립하지 않으므로, "
             "기준일이 파업 발표 이전이라면 이 결정의 전제 자체가 무너집니다.",
         )
     if round_no == 2 and special in ("UN3480", "UN3481") and option.get("mode") == "AIR":
         return _format_devil_message(
             f"{special} 리튬이온 배터리 항공운송 시 요구되는 위험물 신고(DGD)와 "
-            "SOC 30% 이하 충전상태 규정 대응이 준비되어 있습니까?",
+            "SOC 30% 이하 충전상태 규정, 두 가지 모두 충족했습니까? (예/아니오)",
             "이 요건은 준비에 최소 3영업일이 걸리며, 충족하지 못하면 "
             "항공 전환안 자체가 실행 불가능해져 리드타임 이점이 소멸합니다.",
         )
     if round_no == 2:
         return _format_devil_message(
-            "파업이 예고된 8일을 넘겨 연장되고 적체가 2주로 늘어난다면, "
-            "이 안은 어느 시점에 실패로 판정되며 그때 남는 대안은 무엇입니까?",
+            "파업이 예고된 8일을 넘겨 2주로 연장돼도 이 안을 그대로 유지하시겠습니까? (예/아니오)",
             "되돌릴 수 없는 지점을 미리 정해두지 않으면 "
             "실패를 인지한 시점에 이미 대안이 사라져 있습니다.",
         )
     return _format_devil_message(
-        f"인코텀즈 {incoterms} 조건에서 이번 지연으로 발생하는 지체료와 보관료의 "
-        "부담 주체는 누구이며, 그 해석에 대해 화주와 사전 합의된 문서가 있습니까?",
+        f"인코텀즈 {incoterms} 조건의 지체료·보관료 부담 주체에 대해 "
+        "화주와 사전 합의된 문서가 있습니까? (예/아니오)",
         "부담 주체가 확정되지 않은 상태의 결정은 "
         "사후에 클레임으로 전환되어 비용 판단 자체를 무효화합니다.",
     )

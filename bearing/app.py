@@ -1,4 +1,4 @@
-"""GLOVIS WAR ROOM — Streamlit 진입점. 레이아웃 + 탭 라우팅만 담당한다."""
+"""BEAR·ING — Streamlit 진입점. 레이아웃 + 탭 라우팅만 담당한다."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ import state
 from steps import s1_devil, s2_council, s3_radar, s4_rca, s5_playbook, s6_comms
 
 st.set_page_config(
-    page_title="GLOVIS WAR ROOM",
-    page_icon="🚨",
+    page_title="BEAR·ING",
+    page_icon="🧭",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -31,7 +31,7 @@ incident = state.active_incident()
 
 header_left, header_right = st.columns([3, 1], vertical_alignment="center")
 with header_left:
-    st.title("🚨 GLOVIS WAR ROOM")
+    st.title("🧭 BEAR·ING")
     st.caption("글로벌 물류 리스크 감지 → 검증 → 합의 → 실행 → 통보 → 학습, 하나의 사건을 끝까지 따라가는 AI 위기대응 관제실")
 with header_right:
     st.metric("사건번호", f"#{incident['id']}", delta="진행중", delta_color="off")

@@ -139,7 +139,7 @@ def _run_scan(live_mode: bool = False) -> dict:
         # 이벤트 카드는 추출된 전부를 보여주되, 화물 매칭은 진짜 심각한 이벤트로만
         # 한정한다. 경미한 이벤트(수에즈 체선 등)가 무관한 화물을 끌어들이지 않게 한다.
         matching_events = [
-            e for e in events if int(e.get("severity") or 0) >= SEVERITY_MATCH_THRESHOLD
+            e for e in events if llm.safe_int(e.get("severity")) >= SEVERITY_MATCH_THRESHOLD
         ]
 
         if matching_events:
@@ -204,8 +204,8 @@ def _event_card(event: dict) -> None:
     loc = event.get("location") or {}
     period = event.get("period") or {}
     impact = event.get("impact") or {}
-    severity = int(event.get("severity") or 1)
-    confidence = float(event.get("confidence") or 0)
+    severity = llm.safe_int(event.get("severity"), default=1)
+    confidence = llm.safe_float(event.get("confidence"))
 
     with st.container(border=True):
         st.markdown(f"**{loc.get('name') or '미상'}** `{loc.get('port_code') or '-'}`")

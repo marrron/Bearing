@@ -28,7 +28,11 @@ def render(incident: dict) -> None:
     if from_cache:
         st.caption("📦 캐시된 결과 표시 중")
 
-    counts = data.get("cause_counts") or []
+    counts = [
+        {"cause": c["cause"], "count": llm.safe_int(c.get("count"))}
+        for c in (data.get("cause_counts") or [])
+        if c.get("cause")
+    ]
     if counts:
         chart_df = pd.DataFrame(counts).set_index("cause")
         st.bar_chart(chart_df, y="count", horizontal=True, height=280)

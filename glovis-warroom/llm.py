@@ -180,6 +180,29 @@ def _remember_error(exc: Exception) -> None:
         pass
 
 
+# ---------------------------------------------------------------- 안전 형변환
+#
+# call_json은 "유효한 JSON dict"까지만 보장한다. 필드 타입(숫자여야 할 값이
+# 문자열/누락 등)은 보장하지 않으므로, LLM이 반환한 값을 화면에 쓰는 곳에서는
+# int()/float()를 직접 쓰지 말고 아래 safe_int/safe_float를 통해야 한다.
+
+
+def safe_int(value, default: int = 0) -> int:
+    """LLM이 준 값을 int로 안전 변환한다. 실패하면 default."""
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def safe_float(value, default: float = 0.0) -> float:
+    """LLM이 준 값을 float로 안전 변환한다. 실패하면 default."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 # ---------------------------------------------------------------- JSON 호출
 
 

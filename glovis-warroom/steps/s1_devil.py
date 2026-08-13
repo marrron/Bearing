@@ -264,7 +264,8 @@ def _verdict_card(verdict: dict) -> None:
         cols = st.columns(max(len(scores), 1))
         for col, (name, value) in zip(cols, scores.items()):
             with col:
-                st.progress(int(value) / 5, text=f"{name} {value}/5")
+                score = llm.safe_int(value, default=0)
+                st.progress(min(max(score, 0), 5) / 5, text=f"{name} {value}/5")
 
         left, right = st.columns(2)
         with left:

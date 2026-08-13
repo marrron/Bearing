@@ -1,3 +1,4 @@
 streamlit>=1.57
 google-genai>=1.0
 pandas>=2.0
+feedparser>=6.0

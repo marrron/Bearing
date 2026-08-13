@@ -8,20 +8,23 @@ import time
 import pandas as pd
 import streamlit as st
 
+import live_news
 import llm
 import state
 
 SEVERITY_LABEL = {1: "경미", 2: "주의", 3: "경계", 4: "심각", 5: "전면중단"}
 RISK_BADGE = {"LOW": ":green-badge[LOW]", "MID": ":orange-badge[MID]", "HIGH": ":red-badge[HIGH]"}
 
-# 이번 사건의 핵심 항만. 화물 매칭은 이 항만 관련 이벤트로만 한정해
-# 데모 각본의 "50건 중 7건" 필터링 서사가 매번 흔들리지 않게 한다.
-PRIMARY_PORT_CODES = {"NLRTM"}
+# 화물 매칭은 이 심각도 이상인 이벤트로만 한정한다. 항만 코드를 하드코딩하지 않고
+# "진짜 심각한 사건"만 화물에 반영하게 해서, 라이브 뉴스 모드에서 수에즈 체선 같은
+# 경미한 이벤트가 무관한 화물을 끌어들이는 일을 막는다. (캐시 데모 데이터 기준
+# 로테르담 파업만 4이고 나머지는 2라서, 캐시 모드 결과는 기존과 동일하게 유지된다.)
+SEVERITY_MATCH_THRESHOLD = 4
 
 
 def render(incident: dict) -> None:
     st.subheader("리스크 레이더")
-    st.caption("사전 캐싱된 뉴스 20건을 스캔해 물류 영향 이벤트만 추출하고, 진행중 화물 50건과 대조한다.")
+    st.caption("뉴스를 스캔해 물류 영향 이벤트만 추출하고, 진행중 화물 50건과 대조한다.")
 
     # 1) 결과 확보: 세션 → 없으면 폴백
     data = st.session_state.get("s3_match")
@@ -33,10 +36,22 @@ def render(incident: dict) -> None:
     top = st.container(horizontal=True, vertical_alignment="center")
     with top:
         run = st.button("뉴스 스캔 실행", type="primary", key="w_s3_run")
-        st.caption("20건 중 물류 영향 기사만 필터링합니다.")
+        live_mode = st.toggle(
+            "실시간 RSS 뉴스",
+            value=True,
+            key="w_s3_live",
+            help="켜면 gCaptain·Splash 247 등 해운 전문지 RSS를 실시간으로 가져온다. "
+            "실제 뉴스라 로테르담 파업 등 데모 이벤트가 없을 수 있다. "
+            "끄면 데모용으로 미리 준비된 뉴스 20건을 쓴다.",
+        )
+        st.caption(
+            "실시간 RSS에서 가져온 최신 기사를 스캔합니다."
+            if live_mode
+            else "캐시된 뉴스 20건 중 물류 영향 기사만 필터링합니다."
+        )
 
     if run:
-        data = _run_scan()
+        data = _run_scan(live_mode)
         from_cache = False
 
     if from_cache:
@@ -85,14 +100,25 @@ def render(incident: dict) -> None:
 # ---------------------------------------------------------------- LLM 실행
 
 
-def _run_scan() -> dict:
+def _run_scan(live_mode: bool = False) -> dict:
     """뉴스 → 이벤트 추출 → 화물 매칭. 실패해도 폴백을 돌려준다."""
-    news = state.load_news()
     shipments = state.load_shipments()
     routes = state.load_routes()
 
     with st.status("리스크 스캔 진행 중", expanded=True) as status:
-        st.write(f"📰 캐시된 뉴스 {len(news)}건 로드")
+        news = []
+        if live_mode:
+            st.write("📡 RSS 실시간 뉴스 수집 중 (gCaptain · Splash 247 · The Loadstar · FreightWaves)...")
+            news = live_news.fetch_live_news()
+            if news:
+                sources = sorted({n["source"] for n in news})
+                st.write(f"✅ 실시간 기사 {len(news)}건 수집 · 출처: {', '.join(sources)}")
+            else:
+                st.write("⚠️ 실시간 수집 실패 — 캐시된 뉴스로 대체합니다")
+
+        if not news:
+            news = state.load_news()
+            st.write(f"📰 캐시된 뉴스 {len(news)}건 로드")
         time.sleep(0.2)
 
         st.write("🔍 물류 영향 이벤트 추출 중...")
@@ -110,28 +136,33 @@ def _run_scan() -> dict:
         st.write(f"✅ 이벤트 {len(events)}건 추출 · 무관 기사 {max(len(news) - _cited(events), 0)}건 제외")
         time.sleep(0.2)
 
-        # 이벤트 카드는 추출된 전부(로테르담·수에즈·상하이)를 보여주되,
-        # 화물 매칭은 이번 사건의 핵심 항만(로테르담)에만 한정한다.
-        # 그래야 상하이 태풍처럼 부수적인 이벤트가 무관한 화물까지 끌어들이지 않는다.
-        matching_events = [e for e in events if (e.get("location") or {}).get("port_code") in PRIMARY_PORT_CODES]
-        if not matching_events:
-            matching_events = events  # 주 항만 이벤트를 못 찾으면 안전하게 전체를 쓴다
+        # 이벤트 카드는 추출된 전부를 보여주되, 화물 매칭은 진짜 심각한 이벤트로만
+        # 한정한다. 경미한 이벤트(수에즈 체선 등)가 무관한 화물을 끌어들이지 않게 한다.
+        matching_events = [
+            e for e in events if int(e.get("severity") or 0) >= SEVERITY_MATCH_THRESHOLD
+        ]
 
-        st.write("🚢 진행중 화물 50건 대조 및 대체안 설계 중...")
-        match_prompt = (
-            llm.load_prompt("s3_match.txt")
-            .replace("{event_json}", json.dumps(matching_events, ensure_ascii=False))
-            .replace("{shipments_csv}", shipments.to_csv(index=False))
-            .replace("{routes_csv}", routes.to_csv(index=False))
-        )
-        matched = llm.call_json(
-            system="당신은 글로비스 운영 컨트롤타워다. JSON만 출력한다.",
-            messages=[{"role": "user", "content": match_prompt}],
-            fallback_path="s3_match.json",
-            max_tokens=16000,
-        )
+        if matching_events:
+            st.write("🚢 진행중 화물 50건 대조 및 대체안 설계 중...")
+            match_prompt = (
+                llm.load_prompt("s3_match.txt")
+                .replace("{event_json}", json.dumps(matching_events, ensure_ascii=False))
+                .replace("{shipments_csv}", shipments.to_csv(index=False))
+                .replace("{routes_csv}", routes.to_csv(index=False))
+            )
+            matched = llm.call_json(
+                system="당신은 글로비스 운영 컨트롤타워다. JSON만 출력한다.",
+                messages=[{"role": "user", "content": match_prompt}],
+                fallback_path="s3_match.json",
+                max_tokens=16000,
+            )
+            affected = matched.get("affected") or []
+        else:
+            # 심각도 4 이상인 이벤트가 없으면 화물 매칭 자체를 생략한다.
+            # (오늘은 화물에 영향 줄 만큼 심각한 리스크가 없다는 것도 정직한 결과다.)
+            st.write("ℹ️ 심각도 4 이상 이벤트가 없어 화물 매칭을 생략합니다")
+            affected = []
 
-        affected = matched.get("affected") or []
         result = {
             "events": events or (llm.load_fallback("s3_match.json").get("events") or []),
             "affected": affected,
@@ -144,7 +175,19 @@ def _run_scan() -> dict:
 
     st.session_state["s3_match"] = result
     st.session_state["s3_events"] = result["events"]
-    return result
+    _sync_active_incident_count(len(affected))
+    # 사이드바는 본문보다 먼저 그려지므로, 이번 실행 주기 안에는 방금 갱신한
+    # 영향 건수가 반영되지 않는다. 한 번 더 그리게 해서 사이드바까지 맞춘다.
+    st.rerun()
+
+
+def _sync_active_incident_count(affected_count: int) -> None:
+    """사이드바의 '영향 N건'을 시드값 대신 실제 스캔 결과로 갱신한다."""
+    active_id = st.session_state.get("active_incident")
+    for incident in st.session_state.get("incidents", []):
+        if incident["id"] == active_id:
+            incident["affected"] = affected_count
+            break
 
 
 def _cited(events: list) -> int:

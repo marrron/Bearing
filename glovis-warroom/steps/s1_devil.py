@@ -80,20 +80,34 @@ def render(incident: dict) -> None:
 
 
 def _default_selection() -> dict | None:
-    """③을 거치지 않고 ① 탭을 먼저 눌러도 열리도록 폴백에서 기본 선택을 만든다."""
-    data = st.session_state.get("s3_match") or llm.load_fallback("s3_match.json")
-    for item in data.get("affected") or []:
-        if item.get("bl_no") == DEFAULT_BL:
-            options = item.get("options") or []
-            option = next((o for o in options if o.get("label") == "A"), options[0] if options else None)
-            if option:
-                return {
-                    "bl_no": item["bl_no"],
-                    "shipment": state.shipment_by_bl(item["bl_no"]),
-                    "option": option,
-                    "impact_item": item,
-                }
-    return None
+    """③을 거치지 않고 ① 탭을 먼저 눌러도 열리도록 기본 선택을 만든다.
+
+    세션에 실제 스캔 결과가 있으면(라이브든 캐시든 ③을 이미 돌렸다면) 그 결과 안에서
+    고른다 — GLVS2608-0417이 있으면 그걸 우선하고, 없으면(라이브 뉴스가 로테르담을
+    안 다뤄서 다른 화물이 잡힌 경우 등) 첫 번째 영향 화물을 쓴다.
+    ③을 아예 안 돌려서 세션에 스캔 결과가 없을 때만 폴백에서 GLVS2608-0417을 쓴다
+    (데모 각본 안전장치).
+    """
+    scanned = st.session_state.get("s3_match")
+    data = scanned or llm.load_fallback("s3_match.json")
+    affected = data.get("affected") or []
+    if not affected:
+        return None
+
+    item = next((a for a in affected if a.get("bl_no") == DEFAULT_BL), None)
+    if item is None:
+        item = affected[0]  # 스캔 결과 안이면 뭐가 됐든 첫 번째로 대체
+
+    options = item.get("options") or []
+    option = next((o for o in options if o.get("label") == "A"), options[0] if options else None)
+    if not option:
+        return None
+    return {
+        "bl_no": item["bl_no"],
+        "shipment": state.shipment_by_bl(item["bl_no"]),
+        "option": option,
+        "impact_item": item,
+    }
 
 
 def _summary_card(selected: dict) -> None:

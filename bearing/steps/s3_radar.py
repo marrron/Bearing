@@ -248,8 +248,17 @@ def _sync_incidents(events: list, affected_count: int) -> None:
     if not incidents:
         return  # 이벤트가 하나도 없으면 기존 사건 목록을 그대로 둔다
 
+    # 재스캔 전에 선택돼 있던 사건과 제목이 같은 사건이 새 목록에도 있으면 선택을 유지한다.
+    # (사건 id는 이벤트 날짜 기반이라 재스캔마다 새로 생성되므로 id로는 비교할 수 없다)
+    prev_active_id = st.session_state.get("active_incident")
+    prev_title = next(
+        (i["title"] for i in st.session_state.get("incidents", []) if i["id"] == prev_active_id),
+        None,
+    )
+    kept = next((i for i in incidents if i["title"] == prev_title), None)
+
     st.session_state["incidents"] = incidents
-    st.session_state["active_incident"] = incidents[0]["id"]
+    st.session_state["active_incident"] = kept["id"] if kept else incidents[0]["id"]
 
 
 def _cited(events: list) -> int:

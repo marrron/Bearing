@@ -39,6 +39,13 @@ st.html(
         margin-bottom: 0.4rem;
     }
     [data-testid="stSidebar"] hr { margin: 0.75rem 0; }
+
+    /* 감지된 사건 카드 중 선택된 카드(비활성화된 "선택됨" 버튼을 담은 카드)를 강조한다 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] button:disabled) {
+        border: 2px solid #C9A24B !important;
+        background: rgba(201, 162, 75, 0.14);
+        border-radius: 8px;
+    }
     </style>"""
 )
 

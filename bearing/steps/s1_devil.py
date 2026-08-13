@@ -55,7 +55,9 @@ def render(incident: dict) -> None:
         st.caption(f"라운드 {min(round_no, MAX_ROUNDS)}/{MAX_ROUNDS}")
 
     for message in transcript:
-        with st.chat_message(message["role"]):
+        label = "심문관" if message["role"] == "assistant" else "담당자"
+        with st.container(border=True):
+            st.markdown(f"**{label}**")
             st.markdown(message["content"])
 
     verdict = st.session_state.get("s1_verdict")
@@ -179,6 +181,11 @@ def _ask_next(selected: dict) -> None:
     st.session_state["s1_round"] = round_no
 
 
+def _format_devil_message(question: str, reason: str) -> str:
+    """질문/이유를 단락이 명확히 나뉘도록 구성한다."""
+    return f"**질문**\n\n{question}\n\n**이 질문을 하는 이유**\n\n{reason}"
+
+
 def _canned_question(round_no: int, selected: dict) -> str:
     """LLM을 쓸 수 없을 때의 대본. 데모가 절대 끊기지 않게 한다."""
     ship = selected.get("shipment") or {}
@@ -187,35 +194,31 @@ def _canned_question(round_no: int, selected: dict) -> str:
     incoterms = ship.get("인코텀즈", "-")
 
     if round_no == 1:
-        return (
-            "【축】 데이터 근거\n\n"
-            f"【질문】 {option.get('label', '?')}안의 리드타임 {option.get('lead_time_days', 0)}일은 "
-            "어느 시점의 어떤 자료를 기준으로 산출한 수치입니까?\n\n"
-            "【이 질문을 하는 이유】 파업 기간 중에는 평시 기준 리드타임이 성립하지 않으므로, "
-            "기준일이 파업 발표 이전이라면 이 결정의 전제 자체가 무너집니다."
+        return _format_devil_message(
+            f"{option.get('label', '?')}안의 리드타임 {option.get('lead_time_days', 0)}일은 "
+            "어느 시점의 어떤 자료를 기준으로 산출한 수치입니까?",
+            "파업 기간 중에는 평시 기준 리드타임이 성립하지 않으므로, "
+            "기준일이 파업 발표 이전이라면 이 결정의 전제 자체가 무너집니다.",
         )
     if round_no == 2 and special in ("UN3480", "UN3481") and option.get("mode") == "AIR":
-        return (
-            "【축】 실행 가능성\n\n"
-            f"【질문】 {special} 리튬이온 배터리 항공운송 시 요구되는 위험물 신고(DGD)와 "
-            "SOC 30% 이하 충전상태 규정 대응이 준비되어 있습니까?\n\n"
-            "【이 질문을 하는 이유】 이 요건은 준비에 최소 3영업일이 걸리며, 충족하지 못하면 "
-            "항공 전환안 자체가 실행 불가능해져 리드타임 이점이 소멸합니다."
+        return _format_devil_message(
+            f"{special} 리튬이온 배터리 항공운송 시 요구되는 위험물 신고(DGD)와 "
+            "SOC 30% 이하 충전상태 규정 대응이 준비되어 있습니까?",
+            "이 요건은 준비에 최소 3영업일이 걸리며, 충족하지 못하면 "
+            "항공 전환안 자체가 실행 불가능해져 리드타임 이점이 소멸합니다.",
         )
     if round_no == 2:
-        return (
-            "【축】 최악 시나리오\n\n"
-            "【질문】 파업이 예고된 8일을 넘겨 연장되고 적체가 2주로 늘어난다면, "
-            "이 안은 어느 시점에 실패로 판정되며 그때 남는 대안은 무엇입니까?\n\n"
-            "【이 질문을 하는 이유】 되돌릴 수 없는 지점을 미리 정해두지 않으면 "
-            "실패를 인지한 시점에 이미 대안이 사라져 있습니다."
+        return _format_devil_message(
+            "파업이 예고된 8일을 넘겨 연장되고 적체가 2주로 늘어난다면, "
+            "이 안은 어느 시점에 실패로 판정되며 그때 남는 대안은 무엇입니까?",
+            "되돌릴 수 없는 지점을 미리 정해두지 않으면 "
+            "실패를 인지한 시점에 이미 대안이 사라져 있습니다.",
         )
-    return (
-        "【축】 계약/책임\n\n"
-        f"【질문】 인코텀즈 {incoterms} 조건에서 이번 지연으로 발생하는 지체료와 보관료의 "
-        "부담 주체는 누구이며, 그 해석에 대해 화주와 사전 합의된 문서가 있습니까?\n\n"
-        "【이 질문을 하는 이유】 부담 주체가 확정되지 않은 상태의 결정은 "
-        "사후에 클레임으로 전환되어 비용 판단 자체를 무효화합니다."
+    return _format_devil_message(
+        f"인코텀즈 {incoterms} 조건에서 이번 지연으로 발생하는 지체료와 보관료의 "
+        "부담 주체는 누구이며, 그 해석에 대해 화주와 사전 합의된 문서가 있습니까?",
+        "부담 주체가 확정되지 않은 상태의 결정은 "
+        "사후에 클레임으로 전환되어 비용 판단 자체를 무효화합니다.",
     )
 
 

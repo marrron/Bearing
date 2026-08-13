@@ -33,7 +33,7 @@ def render(incident: dict) -> None:
 
     selected = st.session_state.get("s1_selected") or _default_selection()
     if not selected:
-        st.info("③ 감지 탭에서 화물과 대체안을 선택하면 심문이 시작됩니다.")
+        st.info("감지 탭에서 화물과 대체안을 선택하면 심문이 시작됩니다.")
         return
 
     _summary_card(selected)

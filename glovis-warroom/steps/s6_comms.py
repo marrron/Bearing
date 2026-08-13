@@ -37,7 +37,9 @@ def render(incident: dict) -> None:
     tabs = st.tabs([f"{TONE_ICON.get(d.get('tone', ''), '✉️')} {d.get('tone', '안')}" for d in drafts])
     for tab, draft in zip(tabs, drafts):
         with tab:
-            st.text_input("제목", value=draft.get("subject", ""), disabled=True, key=f"w_s6_subj_{draft.get('tone')}")
+            # st.text_input은 key가 고정이면 value= 인자를 무시하고 최초 렌더링 값을 계속
+            # 보여주는 위젯 상태 함정이 있다. 여기는 순수 표시용이라 마크다운으로 대체한다.
+            st.markdown(f"**제목** {draft.get('subject', '-')}")
             st.code(draft.get("body", ""), language="text", wrap_lines=True)
             st.info(f"**예상 고객 반응** — {draft.get('expected_reaction', '-')}")
 

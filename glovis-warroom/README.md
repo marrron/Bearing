@@ -6,7 +6,7 @@
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # ANTHROPIC_API_KEY 입력 (없어도 실행됨)
+cp .env.example .env   # GEMINI_API_KEY 입력 (없어도 실행됨, https://aistudio.google.com 무료 발급)
 streamlit run app.py
 ```
 
@@ -14,8 +14,8 @@ streamlit run app.py
 
 | 환경변수 | 기본값 | 설명 |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | (없음) | 없으면 `fallback/`의 캐시된 결과로 동작 |
-| `MODEL_NAME` | `claude-sonnet-5` | 사용할 모델 |
+| `GEMINI_API_KEY` | (없음) | 없으면 `fallback/`의 캐시된 결과로 동작. [aistudio.google.com](https://aistudio.google.com)에서 무료 발급 |
+| `MODEL_NAME` | `gemini-3.5-flash-lite` | 사용할 모델. 무료 티어 한도가 가장 넉넉함(RPM 15 / RPD 500) |
 
 ## 6단계 파이프라인
 

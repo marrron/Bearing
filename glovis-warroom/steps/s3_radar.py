@@ -14,6 +14,10 @@ import state
 SEVERITY_LABEL = {1: "경미", 2: "주의", 3: "경계", 4: "심각", 5: "전면중단"}
 RISK_BADGE = {"LOW": ":green-badge[LOW]", "MID": ":orange-badge[MID]", "HIGH": ":red-badge[HIGH]"}
 
+# 이번 사건의 핵심 항만. 화물 매칭은 이 항만 관련 이벤트로만 한정해
+# 데모 각본의 "50건 중 7건" 필터링 서사가 매번 흔들리지 않게 한다.
+PRIMARY_PORT_CODES = {"NLRTM"}
+
 
 def render(incident: dict) -> None:
     st.subheader("리스크 레이더")
@@ -72,7 +76,7 @@ def render(incident: dict) -> None:
 
     st.divider()
     st.markdown("#### 화물 상세 · 대체안 비교")
-    st.caption("행을 펼쳐 A/B/C 대체안을 비교하고, 심의에 올릴 안을 선택하면 ① 검증 탭으로 넘어갑니다.")
+    st.caption("행을 펼쳐 A/B/C 대체안을 비교하고, 심의에 올릴 안을 선택하면 검증 탭으로 넘어갑니다.")
 
     for item in affected:
         _shipment_expander(item)
@@ -106,10 +110,17 @@ def _run_scan() -> dict:
         st.write(f"✅ 이벤트 {len(events)}건 추출 · 무관 기사 {max(len(news) - _cited(events), 0)}건 제외")
         time.sleep(0.2)
 
+        # 이벤트 카드는 추출된 전부(로테르담·수에즈·상하이)를 보여주되,
+        # 화물 매칭은 이번 사건의 핵심 항만(로테르담)에만 한정한다.
+        # 그래야 상하이 태풍처럼 부수적인 이벤트가 무관한 화물까지 끌어들이지 않는다.
+        matching_events = [e for e in events if (e.get("location") or {}).get("port_code") in PRIMARY_PORT_CODES]
+        if not matching_events:
+            matching_events = events  # 주 항만 이벤트를 못 찾으면 안전하게 전체를 쓴다
+
         st.write("🚢 진행중 화물 50건 대조 및 대체안 설계 중...")
         match_prompt = (
             llm.load_prompt("s3_match.txt")
-            .replace("{event_json}", json.dumps(events, ensure_ascii=False))
+            .replace("{event_json}", json.dumps(matching_events, ensure_ascii=False))
             .replace("{shipments_csv}", shipments.to_csv(index=False))
             .replace("{routes_csv}", routes.to_csv(index=False))
         )
@@ -117,13 +128,16 @@ def _run_scan() -> dict:
             system="당신은 글로비스 운영 컨트롤타워다. JSON만 출력한다.",
             messages=[{"role": "user", "content": match_prompt}],
             fallback_path="s3_match.json",
-            max_tokens=8000,
+            max_tokens=16000,
         )
 
+        affected = matched.get("affected") or []
         result = {
             "events": events or (llm.load_fallback("s3_match.json").get("events") or []),
-            "affected": matched.get("affected") or [],
-            "not_affected_count": matched.get("not_affected_count", 0),
+            "affected": affected,
+            # LLM이 계산한 값은 종종 산수가 틀리므로(특히 가벼운 모델) 신뢰하지 않고
+            # 전체 화물 수에서 실제로 뽑힌 영향 화물 수를 빼서 결정론적으로 구한다.
+            "not_affected_count": max(len(shipments) - len(affected), 0),
         }
         st.write(f"✅ 영향 화물 {len(result['affected'])}건 식별")
         status.update(label="스캔 완료", state="complete", expanded=False)
@@ -262,4 +276,4 @@ def _option_card(item: dict, ship: dict, option: dict) -> None:
             st.session_state["s1_transcript"] = []
             st.session_state["s1_round"] = 0
             st.session_state["s1_verdict"] = None
-            st.toast(f"{item.get('bl_no')} {label}안을 심의에 올렸습니다. ① 검증 탭으로 이동하세요.", icon="⚖️")
+            st.toast(f"{item.get('bl_no')} {label}안을 심의에 올렸습니다. 검증 탭으로 이동하세요.", icon="⚖️")

@@ -17,6 +17,14 @@ st.set_page_config(
 
 state.init_state()
 
+# 탭 간 간격이 좁아 가독성이 떨어져서 사용자 요청으로 여백만 넓힌다.
+st.html(
+    """<style>
+    [data-testid="stTabs"] [role="tablist"] { gap: 2.5rem; }
+    [data-testid="stTab"] p { font-size: 1rem; }
+    </style>"""
+)
+
 incident = state.active_incident()
 
 # ---------------------------------------------------------------- 헤더
@@ -81,12 +89,12 @@ with st.sidebar:
 
 tab3, tab1, tab2, tab5, tab6, tab4 = st.tabs(
     [
-        "③ 감지 · 리스크 레이더",
-        "① 검증 · 반대심문",
-        "② 합의 · 원탁회의",
-        "⑤ 플레이북",
-        "⑥ 고객통보",
-        "④ 사후분석",
+        "감지 · 리스크 레이더",
+        "검증 · 반대심문",
+        "합의 · 원탁회의",
+        "플레이북",
+        "고객통보",
+        "사후분석",
     ]
 )
 

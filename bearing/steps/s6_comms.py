@@ -21,8 +21,8 @@ def render(incident: dict) -> None:
         from_cache = True
 
     if st.button("메일 3종 생성", type="primary", key="w_s6_run"):
-        data = _generate()
-        from_cache = False
+        _generate()
+        st.rerun()
 
     if from_cache:
         st.caption("캐시된 결과 표시 중")

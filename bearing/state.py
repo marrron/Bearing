@@ -14,6 +14,7 @@ DATA_DIR = Path(__file__).parent / "data"
 DEFAULT_STATE = {
     "incidents": [],        # 감지된 사건 목록
     "active_incident": None,
+    "current_step": 0,      # 현재 열려 있는 파이프라인 단계 인덱스 (STEP_KEYS 순서)
     "s3_events": None,      # 구조화된 이벤트
     "s3_match": None,       # 영향 화물 + 대체안
     "s1_selected": None,    # 담당자가 고른 대체안 (A/B/C)
@@ -27,36 +28,17 @@ DEFAULT_STATE = {
     "last_llm_error": None,
 }
 
-# 사이드바에 항상 떠 있는 사건 3건. 앱 실행 즉시 감지된 상태로 보인다.
-SEED_INCIDENTS = [
-    {
-        "id": "2026-0811-01",
-        "title": "로테르담 항만파업",
-        "port": "NLRTM",
-        "severity": "HIGH",
-        "period": "2026-08-14 ~ 08-22",
-        "affected": 7,
-        "source_ids": ["N001", "N002", "N003"],
-    },
-    {
-        "id": "2026-0809-02",
-        "title": "수에즈 체선 심화",
-        "port": "EGSUZ",
-        "severity": "MID",
-        "period": "2026-08-09 ~",
-        "affected": 0,
-        "source_ids": ["N004", "N005"],
-    },
-    {
-        "id": "2026-0808-03",
-        "title": "상하이 기상경보",
-        "port": "CNSHA",
-        "severity": "LOW",
-        "period": "2026-08-12 ~ 08-17",
-        "affected": 0,
-        "source_ids": ["N006", "N007"],
-    },
-]
+# 아직 스캔 전이라 감지된 사건이 하나도 없을 때 쓰는 자리표시자.
+# active_incident()가 이걸 반환해도 s5_playbook 등이 incident['id']를 그대로 써도 죽지 않는다.
+_EMPTY_INCIDENT = {
+    "id": "PENDING",
+    "title": "-",
+    "port": "-",
+    "severity": "LOW",
+    "period": "-",
+    "affected": 0,
+    "source_ids": [],
+}
 
 # 누적 사건 로그 (④ 사후분석 입력). 하드코딩 12건 + 이번 사건.
 INCIDENT_LOG = [
@@ -79,15 +61,15 @@ STEP_KEYS = ["s3_match", "s1_verdict", "s2_council", "s5_playbook", "s6_comms", 
 
 
 def init_state() -> None:
-    """없는 키만 채운다. 이미 있는 값은 건드리지 않는다."""
+    """없는 키만 채운다. 이미 있는 값은 건드리지 않는다.
+
+    incidents는 일부러 비워둔다 — "뉴스 스캔 실행"을 눌러야 감지된 사건이
+    사이드바에 나타나야 자연스럽다. 하드코딩된 시드 사건을 미리 보여주지 않는다.
+    """
     for key, value in DEFAULT_STATE.items():
         if key not in st.session_state:
             # 리스트/딕셔너리는 복사해서 넣는다 (전역 공유 방지)
             st.session_state[key] = list(value) if isinstance(value, list) else value
-    if not st.session_state["incidents"]:
-        st.session_state["incidents"] = [dict(i) for i in SEED_INCIDENTS]
-    if st.session_state["active_incident"] is None:
-        st.session_state["active_incident"] = SEED_INCIDENTS[0]["id"]
 
 
 def progress_done() -> int:
@@ -100,7 +82,7 @@ def active_incident() -> dict:
     for incident in st.session_state.get("incidents", []):
         if incident["id"] == incident_id:
             return incident
-    return SEED_INCIDENTS[0]
+    return _EMPTY_INCIDENT
 
 
 # ---------------------------------------------------------------- 데이터 로더

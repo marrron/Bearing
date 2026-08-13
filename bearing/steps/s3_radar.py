@@ -24,47 +24,55 @@ SEVERITY_MATCH_THRESHOLD = 4
 
 def render(incident: dict) -> None:
     st.subheader("감지 · 리스크 레이더")
-    st.caption("뉴스를 스캔해 물류 영향 이벤트만 추출하고, 진행중 화물 50건과 대조합니다.")
 
-    # 1) 결과 확보: 세션 → 없으면 폴백
+    # 1) 결과 확보: 스캔을 한 번도 안 돌렸으면 아무것도 보여주지 않는다.
+    # 사이드바 "감지된 사건"도 스캔 전엔 0건이므로, 본문도 그와 일관되게 비워둔다.
     data = st.session_state.get("s3_match")
-    from_cache = False
-    if not data:
-        data = llm.load_fallback("s3_match.json")
-        from_cache = True
+    has_scanned = data is not None
 
     top = st.container(horizontal=True, vertical_alignment="center")
     with top:
         run = st.button("뉴스 스캔 실행", type="primary", key="w_s3_run")
         live_mode = st.toggle(
             "실시간 RSS 뉴스",
-            value=True,
+            value=False,
             key="w_s3_live",
             help="켜면 gCaptain·Splash 247 등 해운 전문지 RSS를 실시간으로 가져온다. "
             "실제 뉴스라 로테르담 파업 등 데모 이벤트가 없을 수 있다. "
             "끄면 데모용으로 미리 준비된 뉴스 20건을 쓴다.",
         )
-        st.caption(
-            "실시간 RSS에서 가져온 최신 기사를 스캔합니다."
-            if live_mode
-            else "캐시된 뉴스 20건 중 물류 영향 기사만 필터링합니다."
-        )
 
     if run:
         data = _run_scan(live_mode)
-        from_cache = False
+        has_scanned = True
 
-    if from_cache:
-        st.caption("캐시된 결과 표시 중")
+    if not has_scanned:
+        st.info("아직 스캔한 적이 없습니다. `뉴스 스캔 실행`을 눌러주세요.")
+        return
 
     events = data.get("events") or []
     affected = data.get("affected") or []
     not_affected = data.get("not_affected_count", 0)
 
+    # 사이드바에서 선택된 사건에 맞춰 본문도 같이 바뀌게 한다.
+    # (incidents는 events로부터 만들어지므로 제목이 같은 이벤트가 곧 그 사건의 근거다)
+    active_incident_data = next(
+        (i for i in st.session_state.get("incidents", []) if i["id"] == st.session_state.get("active_incident")),
+        None,
+    )
+    if active_incident_data:
+        matching = [e for e in events if _incident_title(e) == active_incident_data["title"]]
+        if matching:
+            events = matching
+        # HIGH 등급 사건일 때만 화물 매칭이 이뤄지므로, 그 외 사건을 선택했으면
+        # 사이드바의 "영향 0건"과 일치하도록 화물 목록도 비운다.
+        if active_incident_data["severity"] != "HIGH":
+            affected = []
+
     # 2) 이벤트 카드
     st.markdown("#### 추출된 리스크 이벤트")
     if not events:
-        st.info("추출된 이벤트가 없습니다. `뉴스 스캔 실행`을 눌러주세요.")
+        st.info("선택한 사건과 연결된 이벤트가 없습니다.")
     else:
         cols = st.columns(len(events))
         for col, event in zip(cols, events):
@@ -84,7 +92,7 @@ def render(incident: dict) -> None:
         st.metric("영향 없음", f"{not_affected}건")
 
     if not affected:
-        st.info("영향 화물이 아직 식별되지 않았습니다.")
+        st.info("이 사건으로 영향받은 화물이 없습니다.")
         return
 
     _affected_table(affected)
@@ -157,6 +165,13 @@ def _run_scan(live_mode: bool = False) -> dict:
                 max_tokens=16000,
             )
             affected = matched.get("affected") or []
+            if not affected:
+                # 실시간 뉴스는 로테르담 파업 시나리오로 설계된 데모 화물 50건과
+                # 지리적으로 안 겹치는 경우가 흔하다. 매칭 0건이면 데모 시나리오
+                # 화물로 대체해서, 감지된 사건은 실제 뉴스여도 이후 검증·합의·플레이북·
+                # 고객통보 단계는 항상 시연 가능한 상태를 유지한다.
+                st.write("실시간 이벤트와 겹치는 화물이 없어 데모 시나리오 화물로 대체합니다")
+                affected = llm.load_fallback("s3_match.json").get("affected") or []
         else:
             # 심각도 4 이상인 이벤트가 없으면 화물 매칭 자체를 생략한다.
             # (오늘은 화물에 영향 줄 만큼 심각한 리스크가 없다는 것도 정직한 결과다.)

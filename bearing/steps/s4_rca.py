@@ -22,8 +22,8 @@ def render(incident: dict) -> None:
         from_cache = True
 
     if st.button("패턴 분석 실행", type="primary", key="w_s4_run"):
-        data = _analyze()
-        from_cache = False
+        _analyze()
+        st.rerun()
 
     if from_cache:
         st.caption("캐시된 결과 표시 중")

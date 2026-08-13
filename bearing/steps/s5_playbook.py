@@ -30,8 +30,8 @@ def render(incident: dict) -> None:
         from_cache = True
 
     if submitted:
-        doc = _generate(duration, volume, budget)
-        from_cache = False
+        _generate(duration, volume, budget)
+        st.rerun()
 
     if from_cache:
         st.caption("캐시된 결과 표시 중")

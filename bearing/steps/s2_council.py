@@ -29,17 +29,15 @@ def render(incident: dict) -> None:
                 st.caption(agent["goal"])
 
     council = st.session_state.get("s2_council")
-    from_cache = False
-    if not council:
-        council = llm.load_fallback("s2_council.json")
-        from_cache = True
+    has_run = council is not None
 
     if st.button("원탁회의 소집", type="primary", key="w_s2_run"):
-        council = _run_council(agents)
-        from_cache = False
+        _run_council(agents)
+        st.rerun()
 
-    if from_cache:
-        st.caption("캐시된 결과 표시 중")
+    if not has_run:
+        st.info("아직 회의를 소집하지 않았습니다. `원탁회의 소집`을 눌러주세요.")
+        return
 
     st.divider()
 

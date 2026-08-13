@@ -17,15 +17,15 @@ COLOR = {"blue": "blue", "orange": "orange", "green": "green", "violet": "violet
 
 
 def render(incident: dict) -> None:
-    st.subheader("원탁회의 · 4개 팀 합의")
-    st.caption("해상운영 · 항공물류 · 원가관리 · 고객대응 4개 팀이 순차로 발언하고, 조정자가 최종 합의안을 도출한다.")
+    st.subheader("합의 · 원탁회의")
+    st.caption("해상운영 · 항공물류 · 원가관리 · 고객대응 4개 팀이 순차로 발언하고, 조정자가 최종 합의안을 도출합니다.")
 
     agents = _agents()
     roster = st.container(horizontal=True)
     with roster:
         for agent in agents:
             with st.container(border=True):
-                st.markdown(f"{agent['icon']} **{agent['name']}**")
+                st.markdown(f"**{agent['name']}**")
                 st.caption(agent["goal"])
 
     council = st.session_state.get("s2_council")
@@ -39,7 +39,7 @@ def render(incident: dict) -> None:
         from_cache = False
 
     if from_cache:
-        st.caption("📦 캐시된 결과 표시 중")
+        st.caption("캐시된 결과 표시 중")
 
     st.divider()
 
@@ -90,8 +90,8 @@ def _run_council(agents: list) -> dict:
             "위 맥락을 근거로 당신 팀의 입장을 3~4문장으로 말하십시오."
         )
 
-        with st.chat_message("assistant", avatar=_safe_icon(agent["icon"])):
-            st.markdown(f"**{agent['icon']} {agent['name']}**")
+        with st.container(border=True):
+            st.markdown(f"**{agent['name']}**")
             stream = llm.call(
                 system=agent["system"],
                 messages=[{"role": "user", "content": user_prompt}],
@@ -104,7 +104,7 @@ def _run_council(agents: list) -> dict:
                 cached = fallback_statements.get(agent["name"], {}).get("text", "")
                 text = st.write_stream(_fake_stream(cached))
 
-        statements.append({"agent": agent["name"], "icon": agent["icon"], "text": text})
+        statements.append({"agent": agent["name"], "text": text})
         time.sleep(0.3)  # 발언 사이 호흡
 
     with st.spinner("조정자가 합의안을 정리하는 중..."):
@@ -138,33 +138,18 @@ def _fake_stream(text: str):
 # ---------------------------------------------------------------- 렌더
 
 
-def _safe_icon(icon: str | None) -> str:
-    """avatar로 넘길 수 있는 형태로 보정한다.
-
-    ':material/x:' 나 이모지가 아니면 Streamlit이 이미지 경로로 해석해 앱이 죽는다.
-    """
-    if not icon:
-        return ":material/person:"
-    if icon.startswith(":") and icon.endswith(":"):
-        return icon
-    if icon.isascii():  # 'anchor' 같은 맨이름은 material 아이콘으로 감싼다
-        return f":material/{icon}:"
-    return icon  # 이모지
-
-
 def _statement(statement: dict, agents: list) -> None:
     meta = next((a for a in agents if a["name"] == statement.get("agent")), None)
-    icon = _safe_icon(statement.get("icon") or (meta or {}).get("icon"))
     color = COLOR.get((meta or {}).get("color", "blue"), "blue")
 
-    with st.chat_message("assistant", avatar=icon):
+    with st.container(border=True):
         st.markdown(f"**:{color}[{statement.get('agent', '-')}]**")
         st.markdown(statement.get("text", ""))
 
 
 def _consensus_card(consensus: dict) -> None:
     with st.container(border=True):
-        st.markdown(f"## 🤝 합의안 — {consensus.get('decision', '-')}안")
+        st.markdown(f"## 합의안 — {consensus.get('decision', '-')}안")
         st.markdown(f"### {consensus.get('title', '-')}")
         st.write(consensus.get("rationale", ""))
 

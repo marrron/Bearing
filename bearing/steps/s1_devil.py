@@ -12,9 +12,9 @@ import state
 MAX_ROUNDS = 3
 
 VERDICT_STYLE = {
-    "PASS": ("🟢", "green", "승인"),
-    "CONDITIONAL": ("🟡", "orange", "조건부 승인"),
-    "REJECT": ("🔴", "red", "반려"),
+    "PASS": ("green", "승인"),
+    "CONDITIONAL": ("orange", "조건부 승인"),
+    "REJECT": ("red", "반려"),
 }
 
 SEVERITY_BADGE = {
@@ -28,8 +28,8 @@ DEFAULT_BL = "GLVS2608-0417"
 
 
 def render(incident: dict) -> None:
-    st.subheader("반대심문 · Devil's Advocate")
-    st.caption("승인하는 위원회가 아니다. 결정이 무너질 지점을 찾아내는 것이 임무다.")
+    st.subheader("검증 · 반대심문")
+    st.caption("승인하는 위원회가 아닙니다. 결정이 무너질 지점을 찾아내는 것이 임무입니다.")
 
     selected = st.session_state.get("s1_selected") or _default_selection()
     if not selected:
@@ -55,8 +55,7 @@ def render(incident: dict) -> None:
         st.caption(f"라운드 {min(round_no, MAX_ROUNDS)}/{MAX_ROUNDS}")
 
     for message in transcript:
-        avatar = "⚖️" if message["role"] == "assistant" else "👤"
-        with st.chat_message(message["role"], avatar=avatar):
+        with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
     verdict = st.session_state.get("s1_verdict")
@@ -253,10 +252,10 @@ def _make_verdict(selected: dict, skipped: bool = False) -> None:
 
 def _verdict_card(verdict: dict) -> None:
     key = (verdict.get("verdict") or "CONDITIONAL").upper()
-    icon, color, label = VERDICT_STYLE.get(key, VERDICT_STYLE["CONDITIONAL"])
+    color, label = VERDICT_STYLE.get(key, VERDICT_STYLE["CONDITIONAL"])
 
     with st.container(border=True):
-        st.markdown(f"## {icon} :{color}[{key}] — {label}")
+        st.markdown(f"## :{color}[{key}] — {label}")
         st.markdown(f"**{verdict.get('one_line', '')}**")
 
         st.divider()

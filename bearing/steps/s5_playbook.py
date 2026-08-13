@@ -10,8 +10,8 @@ import llm
 
 
 def render(incident: dict) -> None:
-    st.subheader("대응 플레이북 발행")
-    st.caption("사건 파라미터를 조정하고 실행 플레이북을 생성한다. 그대로 배포 가능한 마크다운 문서로 내려받는다.")
+    st.subheader("플레이북")
+    st.caption("사건 파라미터를 조정하고 실행 플레이북을 생성합니다. 그대로 배포 가능한 마크다운 문서로 내려받습니다.")
 
     with st.form("w_s5_form"):
         cols = st.columns(3)
@@ -34,7 +34,7 @@ def render(incident: dict) -> None:
         from_cache = False
 
     if from_cache:
-        st.caption("📦 캐시된 결과 표시 중")
+        st.caption("캐시된 결과 표시 중")
 
     st.download_button(
         "플레이북 .md 다운로드",

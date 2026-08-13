@@ -34,7 +34,6 @@ SEED_INCIDENTS = [
         "title": "로테르담 항만파업",
         "port": "NLRTM",
         "severity": "HIGH",
-        "badge": "🔴",
         "period": "2026-08-14 ~ 08-22",
         "affected": 7,
         "source_ids": ["N001", "N002", "N003"],
@@ -44,7 +43,6 @@ SEED_INCIDENTS = [
         "title": "수에즈 체선 심화",
         "port": "EGSUZ",
         "severity": "MID",
-        "badge": "🟡",
         "period": "2026-08-09 ~",
         "affected": 0,
         "source_ids": ["N004", "N005"],
@@ -54,7 +52,6 @@ SEED_INCIDENTS = [
         "title": "상하이 기상경보",
         "port": "CNSHA",
         "severity": "LOW",
-        "badge": "⚪",
         "period": "2026-08-12 ~ 08-17",
         "affected": 0,
         "source_ids": ["N006", "N007"],
@@ -91,16 +88,6 @@ def init_state() -> None:
         st.session_state["incidents"] = [dict(i) for i in SEED_INCIDENTS]
     if st.session_state["active_incident"] is None:
         st.session_state["active_incident"] = SEED_INCIDENTS[0]["id"]
-
-
-def reset_state() -> None:
-    """데모 리셋. 세션을 초기 상태로 되돌린다."""
-    for key in list(DEFAULT_STATE.keys()):
-        st.session_state.pop(key, None)
-    # 위젯 상태도 함께 비운다
-    for key in [k for k in st.session_state.keys() if str(k).startswith("w_")]:
-        st.session_state.pop(key, None)
-    init_state()
 
 
 def progress_done() -> int:

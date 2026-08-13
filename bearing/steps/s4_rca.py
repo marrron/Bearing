@@ -12,8 +12,8 @@ import state
 
 
 def render(incident: dict) -> None:
-    st.subheader("사후분석 · 누적 패턴")
-    st.caption(f"누적 사건 {len(state.INCIDENT_LOG)}건(이번 사건 포함)을 원인 유형별로 분류하고 반복 패턴을 찾는다.")
+    st.subheader("사후분석")
+    st.caption(f"누적 사건 {len(state.INCIDENT_LOG)}건(이번 사건 포함)을 원인 유형별로 분류하고 반복 패턴을 찾습니다.")
 
     data = st.session_state.get("s4_rca")
     from_cache = False
@@ -26,7 +26,7 @@ def render(incident: dict) -> None:
         from_cache = False
 
     if from_cache:
-        st.caption("📦 캐시된 결과 표시 중")
+        st.caption("캐시된 결과 표시 중")
 
     counts = [
         {"cause": c["cause"], "count": llm.safe_int(c.get("count"))}

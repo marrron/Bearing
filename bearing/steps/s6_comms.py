@@ -9,12 +9,10 @@ import streamlit as st
 import llm
 from steps import s1_devil
 
-TONE_ICON = {"사실중심": "📋", "관계중심": "🤝", "보상제시": "💰"}
-
 
 def render(incident: dict) -> None:
-    st.subheader("고객 통보 문안")
-    st.caption("반대심문 판정과 합의안을 반영해 톤이 다른 메일 3종을 생성한다. 각 안에는 예상 고객 반응이 붙는다.")
+    st.subheader("고객통보")
+    st.caption("반대심문 판정과 합의안을 반영해 톤이 다른 메일 3종을 생성합니다. 각 안에는 예상 고객 반응이 붙습니다.")
 
     data = st.session_state.get("s6_comms")
     from_cache = False
@@ -27,14 +25,14 @@ def render(incident: dict) -> None:
         from_cache = False
 
     if from_cache:
-        st.caption("📦 캐시된 결과 표시 중")
+        st.caption("캐시된 결과 표시 중")
 
     drafts = data.get("drafts") or []
     if not drafts:
         st.info("생성된 문안이 없습니다.")
         return
 
-    tabs = st.tabs([f"{TONE_ICON.get(d.get('tone', ''), '✉️')} {d.get('tone', '안')}" for d in drafts])
+    tabs = st.tabs([d.get("tone", "안") for d in drafts])
     for tab, draft in zip(tabs, drafts):
         with tab:
             # st.text_input은 key가 고정이면 value= 인자를 무시하고 최초 렌더링 값을 계속

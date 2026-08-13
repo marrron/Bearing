@@ -23,8 +23,8 @@ SEVERITY_MATCH_THRESHOLD = 4
 
 
 def render(incident: dict) -> None:
-    st.subheader("리스크 레이더")
-    st.caption("뉴스를 스캔해 물류 영향 이벤트만 추출하고, 진행중 화물 50건과 대조한다.")
+    st.subheader("감지 · 리스크 레이더")
+    st.caption("뉴스를 스캔해 물류 영향 이벤트만 추출하고, 진행중 화물 50건과 대조합니다.")
 
     # 1) 결과 확보: 세션 → 없으면 폴백
     data = st.session_state.get("s3_match")
@@ -55,7 +55,7 @@ def render(incident: dict) -> None:
         from_cache = False
 
     if from_cache:
-        st.caption("📦 캐시된 결과 표시 중")
+        st.caption("캐시된 결과 표시 중")
 
     events = data.get("events") or []
     affected = data.get("affected") or []
@@ -108,20 +108,20 @@ def _run_scan(live_mode: bool = False) -> dict:
     with st.status("리스크 스캔 진행 중", expanded=True) as status:
         news = []
         if live_mode:
-            st.write("📡 RSS 실시간 뉴스 수집 중 (gCaptain · Splash 247 · The Loadstar · FreightWaves)...")
+            st.write("RSS 실시간 뉴스 수집 중 (gCaptain · Splash 247 · The Loadstar · FreightWaves)...")
             news = live_news.fetch_live_news()
             if news:
                 sources = sorted({n["source"] for n in news})
-                st.write(f"✅ 실시간 기사 {len(news)}건 수집 · 출처: {', '.join(sources)}")
+                st.write(f"실시간 기사 {len(news)}건 수집 · 출처: {', '.join(sources)}")
             else:
-                st.write("⚠️ 실시간 수집 실패 — 캐시된 뉴스로 대체합니다")
+                st.write("실시간 수집 실패 — 캐시된 뉴스로 대체합니다")
 
         if not news:
             news = state.load_news()
-            st.write(f"📰 캐시된 뉴스 {len(news)}건 로드")
+            st.write(f"캐시된 뉴스 {len(news)}건 로드")
         time.sleep(0.2)
 
-        st.write("🔍 물류 영향 이벤트 추출 중...")
+        st.write("물류 영향 이벤트 추출 중...")
         news_text = "\n\n".join(
             f"[{n['id']}] ({n['date']} / {n['source']}) {n['title']}\n{n['body']}" for n in news
         )
@@ -133,7 +133,7 @@ def _run_scan(live_mode: bool = False) -> dict:
             max_tokens=4000,
         )
         events = extracted.get("events") or []
-        st.write(f"✅ 이벤트 {len(events)}건 추출 · 무관 기사 {max(len(news) - _cited(events), 0)}건 제외")
+        st.write(f"이벤트 {len(events)}건 추출 · 무관 기사 {max(len(news) - _cited(events), 0)}건 제외")
         time.sleep(0.2)
 
         # 이벤트 카드는 추출된 전부를 보여주되, 화물 매칭은 진짜 심각한 이벤트로만
@@ -143,7 +143,7 @@ def _run_scan(live_mode: bool = False) -> dict:
         ]
 
         if matching_events:
-            st.write("🚢 진행중 화물 50건 대조 및 대체안 설계 중...")
+            st.write("진행중 화물 50건 대조 및 대체안 설계 중...")
             match_prompt = (
                 llm.load_prompt("s3_match.txt")
                 .replace("{event_json}", json.dumps(matching_events, ensure_ascii=False))
@@ -160,7 +160,7 @@ def _run_scan(live_mode: bool = False) -> dict:
         else:
             # 심각도 4 이상인 이벤트가 없으면 화물 매칭 자체를 생략한다.
             # (오늘은 화물에 영향 줄 만큼 심각한 리스크가 없다는 것도 정직한 결과다.)
-            st.write("ℹ️ 심각도 4 이상 이벤트가 없어 화물 매칭을 생략합니다")
+            st.write("심각도 4 이상 이벤트가 없어 화물 매칭을 생략합니다")
             affected = []
 
         result = {
@@ -170,24 +170,86 @@ def _run_scan(live_mode: bool = False) -> dict:
             # 전체 화물 수에서 실제로 뽑힌 영향 화물 수를 빼서 결정론적으로 구한다.
             "not_affected_count": max(len(shipments) - len(affected), 0),
         }
-        st.write(f"✅ 영향 화물 {len(result['affected'])}건 식별")
+        st.write(f"영향 화물 {len(result['affected'])}건 식별")
         status.update(label="스캔 완료", state="complete", expanded=False)
 
     st.session_state["s3_match"] = result
     st.session_state["s3_events"] = result["events"]
-    _sync_active_incident_count(len(affected))
+    _sync_incidents(result["events"], len(affected))
     # 사이드바는 본문보다 먼저 그려지므로, 이번 실행 주기 안에는 방금 갱신한
-    # 영향 건수가 반영되지 않는다. 한 번 더 그리게 해서 사이드바까지 맞춘다.
+    # 사건 목록이 반영되지 않는다. 한 번 더 그리게 해서 사이드바까지 맞춘다.
     st.rerun()
 
 
-def _sync_active_incident_count(affected_count: int) -> None:
-    """사이드바의 '영향 N건'을 시드값 대신 실제 스캔 결과로 갱신한다."""
-    active_id = st.session_state.get("active_incident")
-    for incident in st.session_state.get("incidents", []):
-        if incident["id"] == active_id:
-            incident["affected"] = affected_count
-            break
+# 사건 제목에 쓸 이벤트 유형 라벨. s3_extract.txt의 type enum과 맞춘다.
+EVENT_TYPE_LABEL = {
+    "PORT_STRIKE": "항만파업",
+    "CONGESTION": "체선 심화",
+    "WEATHER": "기상경보",
+    "GEOPOLITICAL": "지정학 리스크",
+    "CAPACITY": "선복 부족",
+    "REGULATION": "규제 이슈",
+}
+
+MAX_SIDEBAR_INCIDENTS = 6
+
+
+def _severity_label(severity: int) -> str:
+    """이벤트 severity(1~5)를 사이드바 표시용 등급으로 변환한다."""
+    if severity >= SEVERITY_MATCH_THRESHOLD:
+        return "HIGH"
+    if severity == 3:
+        return "MID"
+    return "LOW"
+
+
+def _format_period(period: dict) -> str:
+    start = period.get("start") or "?"
+    end = period.get("end")
+    if not end:
+        return f"{start} ~"
+    # 종료일이 시작일과 같은 해라면 월-일만 짧게 보여준다 (기존 시드 데이터 표기와 동일)
+    if len(end) == 10 and end[:4] == start[:4]:
+        return f"{start} ~ {end[5:]}"
+    return f"{start} ~ {end}"
+
+
+def _incident_title(event: dict) -> str:
+    loc = event.get("location") or {}
+    name = loc.get("name") or loc.get("port_code") or "미상"
+    label = EVENT_TYPE_LABEL.get(event.get("type"), "리스크 감지")
+    return f"{name} {label}"
+
+
+def _sync_incidents(events: list, affected_count: int) -> None:
+    """사이드바의 '감지된 사건'을 시드 데이터 대신 이번 스캔에서 실제로 추출한
+    이벤트로 통째로 교체한다. 화물 매칭에 쓰인 HIGH 등급 사건에만 영향 건수를 붙인다.
+    """
+    ranked = sorted(events, key=lambda e: llm.safe_int(e.get("severity")), reverse=True)
+    incidents = []
+    for idx, event in enumerate(ranked[:MAX_SIDEBAR_INCIDENTS], start=1):
+        loc = event.get("location") or {}
+        period = event.get("period") or {}
+        severity = llm.safe_int(event.get("severity"), default=1)
+        label = _severity_label(severity)
+        date_key = (period.get("start") or "").replace("-", "") or "20260101"
+        incidents.append(
+            {
+                "id": f"{date_key[:4]}-{date_key[4:]}-{idx:02d}",
+                "title": _incident_title(event),
+                "port": loc.get("port_code") or "-",
+                "severity": label,
+                "period": _format_period(period),
+                "affected": affected_count if label == "HIGH" else 0,
+                "source_ids": event.get("source_ids") or [],
+            }
+        )
+
+    if not incidents:
+        return  # 이벤트가 하나도 없으면 기존 사건 목록을 그대로 둔다
+
+    st.session_state["incidents"] = incidents
+    st.session_state["active_incident"] = incidents[0]["id"]
 
 
 def _cited(events: list) -> int:
@@ -208,7 +270,11 @@ def _event_card(event: dict) -> None:
     confidence = llm.safe_float(event.get("confidence"))
 
     with st.container(border=True):
-        st.markdown(f"**{loc.get('name') or '미상'}** `{loc.get('port_code') or '-'}`")
+        port_code = loc.get("port_code")
+        name_line = f"**{loc.get('name') or '미상'}**"
+        if port_code:
+            name_line += f" `{port_code}`"
+        st.markdown(name_line)
         st.caption(f"{event.get('type', '-')} · {period.get('start') or '?'} ~ {period.get('end') or '진행중'}")
         st.progress(severity / 5, text=f"심각도 {severity}/5 · {SEVERITY_LABEL.get(severity, '-')}")
         st.progress(confidence, text=f"신뢰도 {confidence:.0%}")
@@ -227,7 +293,7 @@ def _affected_table(affected: list) -> None:
         ship = state.shipment_by_bl(item.get("bl_no", ""))
         rows.append(
             {
-                "영향": "🔴 직접" if item.get("impact") == "DIRECT" else "🟡 간접",
+                "영향": "직접" if item.get("impact") == "DIRECT" else "간접",
                 "BL_NO": item.get("bl_no"),
                 "화주명": ship.get("화주명", "-"),
                 "화물유형": ship.get("화물유형", "-"),
@@ -236,7 +302,7 @@ def _affected_table(affected: list) -> None:
                 "납기일": ship.get("납기일", "-"),
                 "인코텀즈": ship.get("인코텀즈", "-"),
                 "예상지연": item.get("delay_est_days", 0),
-                "SLA위반": "⚠️ 예상" if item.get("sla_breach") else "정상",
+                "SLA위반": "예상" if item.get("sla_breach") else "정상",
                 "특수화물": ship.get("특수화물코드", "") or "-",
                 "추천안": item.get("recommend", "-"),
             }
@@ -319,4 +385,4 @@ def _option_card(item: dict, ship: dict, option: dict) -> None:
             st.session_state["s1_transcript"] = []
             st.session_state["s1_round"] = 0
             st.session_state["s1_verdict"] = None
-            st.toast(f"{item.get('bl_no')} {label}안을 심의에 올렸습니다. 검증 탭으로 이동하세요.", icon="⚖️")
+            st.toast(f"{item.get('bl_no')} {label}안을 심의에 올렸습니다. 검증 탭으로 이동하세요.")

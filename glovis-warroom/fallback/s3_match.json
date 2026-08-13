@@ -1,0 +1,138 @@
+{
+  "events": [
+    {
+      "type": "PORT_STRIKE",
+      "location": {"port_code": "NLRTM", "name": "로테르담", "region": "북유럽"},
+      "period": {"start": "2026-08-14", "end": "2026-08-22"},
+      "severity": 4,
+      "confidence": 0.9,
+      "impact": {"delay_days_min": 7, "delay_days_max": 14, "affects_modes": ["SEA"]},
+      "summary": "로테르담 컨테이너 터미널 노조가 8일간 파업에 돌입하며 처리능력이 정상의 25% 수준으로 떨어진다.",
+      "evidence": "노조가 8월 14일부터 22일까지 파업을 확정했고, 터미널 운영사는 처리능력 급감과 파업 종료 후 1~2주 적체를 예상한다고 보도됨. 선사 3곳이 이미 로테르담 기항을 생략하고 앤트워프·함부르크로 양륙지를 변경.",
+      "source_ids": ["N001", "N002", "N003"]
+    },
+    {
+      "type": "CONGESTION",
+      "location": {"port_code": "EGSUZ", "name": "수에즈 운하", "region": "중동"},
+      "period": {"start": "2026-08-09", "end": null},
+      "severity": 2,
+      "confidence": 0.8,
+      "impact": {"delay_days_min": 2, "delay_days_max": 4, "affects_modes": ["SEA"]},
+      "summary": "준설 작업으로 통항 슬롯이 축소되며 북행 선단 대기시간이 평균 3.4일로 늘었다.",
+      "evidence": "대기시간이 7월 1.9일에서 3.4일로 증가. 운하청은 대비터호 준설로 인한 일시적 슬롯 축소로 설명. 북유럽 항만 혼란과 겹칠 경우 누적 지연이 1주를 넘을 수 있다는 선사 경고.",
+      "source_ids": ["N004", "N005"]
+    },
+    {
+      "type": "WEATHER",
+      "location": {"port_code": "CNSHA", "name": "상하이", "region": "동아시아"},
+      "period": {"start": "2026-08-12", "end": "2026-08-17"},
+      "severity": 2,
+      "confidence": 0.85,
+      "impact": {"delay_days_min": 3, "delay_days_max": 5, "affects_modes": ["SEA"]},
+      "summary": "태풍 나리 통과로 양산·외고교 터미널이 24~36시간 중단되었고 접안 대기 40척이 발생했다.",
+      "evidence": "기상청 오렌지 경보 발령 후 터미널 운영 중단. 구조적 피해는 없으나 접안 스케줄 정상화에 4일 소요 전망. T/S 화물의 연결 지연 가능성 언급.",
+      "source_ids": ["N006", "N007"]
+    }
+  ],
+  "affected": [
+    {
+      "bl_no": "GLVS2608-0417",
+      "impact": "DIRECT",
+      "reason": "POD가 NLRTM이고 ETA 2026-08-18이 파업기간(08-14~08-22) 한복판에 들어간다.",
+      "delay_est_days": 12,
+      "sla_breach": true,
+      "options": [
+        {"label": "A", "route": "인천(ICN)→암스테르담(AMS) 항공 직항", "mode": "AIR", "lead_time_days": 2, "cost_index": 780, "co2_index": 1450, "risk": "HIGH", "tradeoff": "납기는 지키지만 운임이 해상의 7.8배이며 UN3480 리튬이온 배터리 항공운송 규제 대응이 필요하다.", "trigger": "납기 위반 시 DDP 계약상 지체보상금이 항공 추가운임을 초과할 때"},
+        {"label": "B", "route": "부산→로테르담 직항 해상 유지(파업 종료 후 양륙)", "mode": "SEA", "lead_time_days": 38, "cost_index": 100, "co2_index": 100, "risk": "MID", "tradeoff": "추가 비용은 없으나 납기를 12일 초과하며 체선료·보관료가 발생한다.", "trigger": "화주가 납기 연장에 동의하고 지체보상 조항이 면책될 때"},
+        {"label": "C", "route": "부산→함부르크 양륙 후 육상 트럭 로테르담 인도", "mode": "MULTIMODAL", "lead_time_days": 21, "cost_index": 235, "co2_index": 340, "risk": "MID", "tradeoff": "항공의 1/3 비용으로 지연을 12일에서 3일로 줄이지만 함부르크 하역 슬롯과 국경 육상 운송 확보가 전제된다.", "trigger": "함부르크 터미널 슬롯이 확보되고 화주가 3일 지연을 수용할 때"}
+      ],
+      "recommend": "C",
+      "why": "A안은 UN3480 위험물 항공 신고와 SOC 30% 규정 대응에 최소 3영업일이 필요해 실행 리스크가 크다. C안은 비용을 항공 대비 70% 절감하면서 지연을 3일로 억제해 DDP 조건의 지체보상 노출을 최소화한다."
+    },
+    {
+      "bl_no": "GLVS2608-0422",
+      "impact": "DIRECT",
+      "reason": "POD가 NLRTM이고 ETA 2026-08-19가 파업기간과 겹치며 납기일까지 여유가 2일뿐이다.",
+      "delay_est_days": 11,
+      "sla_breach": true,
+      "options": [
+        {"label": "A", "route": "인천(ICN)→암스테르담(AMS) 항공 직항", "mode": "AIR", "lead_time_days": 2, "cost_index": 780, "co2_index": 1450, "risk": "HIGH", "tradeoff": "완성차 28대를 항공으로 전환하는 것은 물리적 선복 자체가 부족하다.", "trigger": "일부 우선 물량만 분할 항공 전환할 때"},
+        {"label": "B", "route": "부산→로테르담 직항 해상 유지", "mode": "SEA", "lead_time_days": 37, "cost_index": 100, "co2_index": 100, "risk": "MID", "tradeoff": "비용 동결 대신 11일 지연.", "trigger": "CIF 조건상 위험이 화주로 이전된 상태이며 화주가 지연을 수용할 때"},
+        {"label": "C", "route": "부산→함부르크 양륙 후 육상 인도", "mode": "MULTIMODAL", "lead_time_days": 22, "cost_index": 228, "co2_index": 330, "risk": "MID", "tradeoff": "지연 4일로 축소, 비용 2.3배.", "trigger": "완성차 로로 하역이 가능한 함부르크 선석이 확보될 때"}
+      ],
+      "recommend": "C",
+      "why": "완성차 28대는 항공 전환 시 선복 확보가 사실상 불가능하다. 함부르크 양륙 후 육상 인도가 유일하게 납기 근접이 가능한 현실적 대안이다."
+    },
+    {
+      "bl_no": "GLVS2608-0431",
+      "impact": "DIRECT",
+      "reason": "POD가 NLRTM, ETA 2026-08-20이 파업기간과 겹치고 납기일이 ETA 다음날이라 여유가 1일뿐이다.",
+      "delay_est_days": 11,
+      "sla_breach": true,
+      "options": [
+        {"label": "A", "route": "인천(ICN)→암스테르담(AMS) 항공 직항", "mode": "AIR", "lead_time_days": 2, "cost_index": 780, "co2_index": 1450, "risk": "MID", "tradeoff": "부품 12FEU는 항공 전환이 물리적으로 가능하나 운임이 화물가액의 상당 부분을 잠식한다.", "trigger": "생산라인 정지 손실이 항공 추가운임을 초과할 때"},
+        {"label": "B", "route": "부산→로테르담 직항 해상 유지", "mode": "SEA", "lead_time_days": 37, "cost_index": 100, "co2_index": 100, "risk": "HIGH", "tradeoff": "비용 동결 대신 유럽 생산라인 결품 리스크.", "trigger": "현지 재고가 11일분 이상 확보되어 있을 때"},
+        {"label": "C", "route": "부산→함부르크 양륙 후 육상 인도", "mode": "MULTIMODAL", "lead_time_days": 21, "cost_index": 228, "co2_index": 330, "risk": "LOW", "tradeoff": "지연 3일, 비용 2.3배.", "trigger": "현지 재고가 3일분 이상일 때"}
+      ],
+      "recommend": "A",
+      "why": "자동차부품은 결품 시 유럽 생산라인 정지로 이어져 손실이 운임을 크게 상회한다. 12FEU 규모는 항공 선복 확보가 현실적이며 특수화물 규제도 없다."
+    },
+    {
+      "bl_no": "GLVS2608-0445",
+      "impact": "DIRECT",
+      "reason": "POD가 NLRTM이고 ETA 2026-08-21이 파업 종료 직전에 걸려 적체 구간에 정면으로 들어간다.",
+      "delay_est_days": 13,
+      "sla_breach": false,
+      "options": [
+        {"label": "A", "route": "인천(ICN)→암스테르담(AMS) 항공 직항", "mode": "AIR", "lead_time_days": 2, "cost_index": 780, "co2_index": 1450, "risk": "HIGH", "tradeoff": "중장비 720톤은 항공 전환 대상이 아니다.", "trigger": "해당 없음"},
+        {"label": "B", "route": "부산→로테르담 직항 해상 유지", "mode": "SEA", "lead_time_days": 39, "cost_index": 100, "co2_index": 100, "risk": "LOW", "tradeoff": "납기까지 10일 여유가 있어 지연을 흡수할 수 있다.", "trigger": "납기일 2026-08-31 이전 인도가 가능할 때"},
+        {"label": "C", "route": "부산→함부르크 양륙 후 육상 인도", "mode": "MULTIMODAL", "lead_time_days": 23, "cost_index": 228, "co2_index": 330, "risk": "MID", "tradeoff": "중량물 육상 운송 허가와 특수 트레일러 확보가 추가로 필요하다.", "trigger": "해상 지연이 13일을 초과할 것으로 재판단될 때"}
+      ],
+      "recommend": "B",
+      "why": "납기일까지 10일 여유가 있어 예상 지연 13일 중 상당 부분을 흡수할 수 있다. 중량 720톤 중장비는 대체 모드 전환 비용이 지연 손실보다 크다."
+    },
+    {
+      "bl_no": "GLVS2608-0452",
+      "impact": "INDIRECT",
+      "reason": "POD는 함부르크지만 T/S 항이 NLRTM이라 환적 연결편이 파업 적체에 밀린다.",
+      "delay_est_days": 6,
+      "sla_breach": false,
+      "options": [
+        {"label": "A", "route": "인천(ICN)→프랑크푸르트(FRA) 항공", "mode": "AIR", "lead_time_days": 2, "cost_index": 760, "co2_index": 1420, "risk": "MID", "tradeoff": "속도를 사지만 일반화물 20FEU에 항공 운임은 과잉 대응이다.", "trigger": "납기가 5일 이내로 압축될 때"},
+        {"label": "B", "route": "부산→함부르크 직항 해상(T/S 제거)", "mode": "SEA", "lead_time_days": 28, "cost_index": 104, "co2_index": 103, "risk": "LOW", "tradeoff": "환적 자체를 없애 파업 노출을 제거하되 다음 직항 선박 스케줄을 기다려야 한다.", "trigger": "직항 선복이 주간 단위로 확보될 때"},
+        {"label": "C", "route": "부산→싱가포르 T/S→함부르크", "mode": "SEA", "lead_time_days": 32, "cost_index": 96, "co2_index": 110, "risk": "LOW", "tradeoff": "환적항을 로테르담에서 싱가포르로 옮겨 리스크를 회피하나 4일 더 걸린다.", "trigger": "직항 선복이 없을 때의 차선책"}
+      ],
+      "recommend": "B",
+      "why": "납기까지 8일 여유가 있어 직항 전환으로 파업 노출을 완전히 제거하는 것이 가장 안전하다. 운임 증가도 4% 수준으로 미미하다."
+    },
+    {
+      "bl_no": "GLVS2608-0460",
+      "impact": "INDIRECT",
+      "reason": "상하이 출항 화물이지만 T/S 항이 NLRTM이라 환적 대기가 발생하며, 상하이 태풍 적체와 중첩된다.",
+      "delay_est_days": 7,
+      "sla_breach": false,
+      "options": [
+        {"label": "A", "route": "상하이→프랑크푸르트 항공", "mode": "AIR", "lead_time_days": 2, "cost_index": 760, "co2_index": 1420, "risk": "MID", "tradeoff": "납기 여유가 9일이라 항공 전환의 정당성이 약하다.", "trigger": "지연이 9일을 초과할 때"},
+        {"label": "B", "route": "상하이→함부르크 직항 해상", "mode": "SEA", "lead_time_days": 31, "cost_index": 99, "co2_index": 106, "risk": "LOW", "tradeoff": "환적을 제거해 리스크를 낮추고 비용은 거의 동일하다.", "trigger": "상하이 적체 해소 후 직항 선복이 확보될 때"},
+        {"label": "C", "route": "상하이→싱가포르 T/S→함부르크", "mode": "SEA", "lead_time_days": 33, "cost_index": 94, "co2_index": 109, "risk": "MID", "tradeoff": "최저 비용이지만 환적 단계가 유지되어 변수가 남는다.", "trigger": "직항 선복 부족 시"}
+      ],
+      "recommend": "B",
+      "why": "환적항 변경만으로 파업 노출이 사라지고 운임 차이는 5% 이내다. 상하이 태풍 적체가 4일 내 해소될 전망이므로 직항 대기가 합리적이다."
+    },
+    {
+      "bl_no": "GLVS2609-0011",
+      "impact": "INDIRECT",
+      "reason": "T/S 항이 NLRTM이며 ETD 2026-08-08 출항건이 파업 후 적체 구간에서 환적된다.",
+      "delay_est_days": 5,
+      "sla_breach": false,
+      "options": [
+        {"label": "A", "route": "인천→프랑크푸르트 항공", "mode": "AIR", "lead_time_days": 2, "cost_index": 760, "co2_index": 1420, "risk": "LOW", "tradeoff": "10FEU 부품은 항공 전환이 가능하나 납기 여유 대비 과잉이다.", "trigger": "현지 재고 소진이 임박할 때"},
+        {"label": "B", "route": "부산→함부르크 직항 해상", "mode": "SEA", "lead_time_days": 28, "cost_index": 104, "co2_index": 103, "risk": "LOW", "tradeoff": "환적 제거, 비용 4% 증가.", "trigger": "직항 선복 확보 시"},
+        {"label": "C", "route": "부산→싱가포르 T/S→함부르크", "mode": "SEA", "lead_time_days": 32, "cost_index": 96, "co2_index": 110, "risk": "LOW", "tradeoff": "비용 최저, 4일 추가.", "trigger": "납기 여유가 8일 이상 유지될 때"}
+      ],
+      "recommend": "C",
+      "why": "납기까지 여유가 충분하고 EXW 조건상 추가 비용이 화주 부담이므로 최저 비용안이 합리적이다. 환적항을 싱가포르로 옮기는 것만으로 파업 노출은 제거된다."
+    }
+  ],
+  "not_affected_count": 43
+}
